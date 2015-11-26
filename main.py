@@ -3,6 +3,8 @@ import io
 import unicodedata
 import sys
 import numpy as np
+from nltk import word_tokenize          
+from nltk.stem import WordNetLemmatizer 
 from sklearn import metrics
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -14,6 +16,12 @@ DIAGNOSTICS = True
 def strip_accents(s):
     return ''.join(c for c in unicodedata.normalize('NFD', s)
         if unicodedata.category(c) != 'Mn')
+
+class LemmaTokenizer(object):
+    def __init__(self):
+        self.wnl = WordNetLemmatizer()
+    def __call__(self, doc):
+        return [self.wnl.lemmatize(t) for t in word_tokenize(doc)]
 
 # Load data (train_small.json , train.json)
 train_file = io.open('train.json', 'r')
@@ -40,13 +48,13 @@ if DIAGNOSTICS:
     print '%d = %d' % (len(X_test), len(id_test))
 
 # TfidfVectorizer
-vect = TfidfVectorizer().fit(X)
+vect = TfidfVectorizer(tokenizer=LemmaTokenizer()).fit(X)
 tf_x = vect.transform(X)
 tf_test = vect.transform(X_test)
 
 # Train and predict
 #nb_clf = MultinomialNB().fit(tf_x, Y)
-svm_clf = SGDClassifier(loss='perceptron', penalty='l2', alpha=1e-3,
+svm_clf = SGDClassifier(loss='perceptron', penalty='l2', alpha=1e-4,
                         n_iter=5, random_state=42).fit(tf_x, Y)
 Y_test = svm_clf.predict(tf_test)
 
