@@ -6,14 +6,19 @@ import numpy as np
 from nltk import word_tokenize          
 from nltk.stem import WordNetLemmatizer 
 from sklearn import metrics
-from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import SGDClassifier
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import VotingClassifier
 from sklearn.grid_search import GridSearchCV
+from sklearn.neighbors import RadiusNeighborsClassifier
+
 
 DIAGNOSTICS = True
-CUTOFF = 35000
+CUTOFF = 2500
 
 def strip_accents(s):
     return ''.join(c for c in unicodedata.normalize('NFD', s)
@@ -26,7 +31,7 @@ class LemmaTokenizer(object):
         return [self.wnl.lemmatize(t) for t in word_tokenize(doc)]
 
 # Load data (train_small.json , train.json)
-train_file = io.open('train.json', 'r')
+train_file = io.open('train_medium.json', 'r')
 train_json = json.loads(strip_accents(train_file.read()))
 
 X = []
@@ -48,21 +53,29 @@ if DIAGNOSTICS:
 
 # TfidfVectorizer
 vect = TfidfVectorizer(tokenizer=LemmaTokenizer()).fit(X)
-tf_1 = vect.transform(X1)
-tf_2 = vect.transform(X2)
+tf1 = vect.transform(X1)
+tf2 = vect.transform(X2)
 
 # Train and predict
-svm_clf = SGDClassifier(loss='modified_huber', penalty='l2', alpha=1e-4,
-                        n_iter=5, random_state=65).fit(tf_1, Y1)
-Y1_hat = svm_clf.predict(tf_1)
-Y2_hat = svm_clf.predict(tf_2)
+#clf = MultinomialNB().fit(tf1, Y1)
+#clf = SVC(kernel='rbf').fit(tf1, Y1)
+weights = [[1,1,1]]
+for w in weights:
+    #clf1 = DecisionTreeClassifier(max_depth=40).fit(tf1, Y1)
+    #clf2 = KNeighborsClassifier(n_neighbors=8).fit(tf1, Y1)
+    #clf3 = SGDClassifier(loss='modified_huber', penalty='l2', alpha=1e-4,
+                            #n_iter=5, random_state=65).fit(tf1, Y1)
+    #clf = VotingClassifier(estimators=[('dt', clf1), ('knn', clf2), ('sgd', clf3)], voting='soft', weights=w).fit(tf1, Y1)
+    Y1_hat = clf.predict(tf1)
+    Y2_hat = clf.predict(tf2)
 
-# Print diagnostics
-if DIAGNOSTICS:
-    print tf_1.shape
-    #print vect.vocabulary_
-    print "SVM empirical accuracy: %f" % np.mean(Y1_hat == Y1)
-    print "SVM generalization accuracy: %f" % np.mean(Y2_hat == Y2)
-    print "%f,%f" % (np.mean(Y1_hat == Y1), np.mean(Y2_hat == Y2))
-    print metrics.classification_report(Y2, Y2_hat)
-    #print metrics.confusion_matrix(Y2, Y2_hat)
+    # Print diagnostics
+    if DIAGNOSTICS:
+        #print tf1.shape
+        #print vect.vocabulary_
+        print w
+        print "Empirical accuracy: %f" % np.mean(Y1_hat == Y1)
+        print "Generalization accuracy: %f" % np.mean(Y2_hat == Y2)
+        #print "%f,%f" % (np.mean(Y1_hat == Y1), np.mean(Y2_hat == Y2))
+        #print metrics.classification_report(Y2, Y2_hat)
+        #print metrics.confusion_matrix(Y2, Y2_hat)
