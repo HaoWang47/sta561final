@@ -13,7 +13,8 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import VotingClassifier
-from sklearn.grid_search import GridSearchCV
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import BaggingClassifier
 
 DIAGNOSTICS = True
 
@@ -33,11 +34,19 @@ train_json = json.loads(strip_accents(train_file.read()))
 test_file = io.open('test.json', 'r')
 test_json = json.loads(strip_accents(test_file.read()))
 
+i = 0
+
 X1 = []
 Y1 = []
+X1s = []
+Y1s = []
 for o in train_json:
     X1.append(" ".join(o['ingredients']))
     Y1.append(o['cuisine'])
+    i += 1
+    if i <= 3000:
+        X1s.append(" ".join(o['ingredients']))
+        Y1s.append(o['cuisine'])
 
 id_test = []
 X2 = []
@@ -56,18 +65,17 @@ print "vectorize"
 sys.stdout.flush()
 vect = TfidfVectorizer(tokenizer=LemmaTokenizer()).fit(X1)
 tf1 = vect.transform(X1).todense()
+tf1s = vect.transform(X1s).todense()
 tf2 = vect.transform(X2).todense()
 
 # Train
 print "train"
 sys.stdout.flush()
 
-clf = KNeighborsClassifier(n_neighbors=8,algorithm='kd_tree',leaf_size=500).fit(tf1, Y1)
-#clf1 = DecisionTreeClassifier(max_depth=40).fit(tf1, Y1)
-#clf2 = KNeighborsClassifier(n_neighbors=8).fit(tf1, Y1)
-#clf3 = SGDClassifier(loss='modified_huber', penalty='l2', alpha=1e-4,
-                        #n_iter=5, random_state=65).fit(tf1, Y1)
-#clf = VotingClassifier(estimators=[('dt', clf1), ('knn', clf2), ('sgd', clf3)], voting='soft', weights=[1,4,2]).fit(tf1, Y1)
+clf1 = DecisionTreeClassifier(max_depth=40).fit(tf1, Y1)
+clf3 = SGDClassifier(loss='modified_huber', penalty='l2', alpha=1e-4,
+                        n_iter=5, random_state=65).fit(tf1, Y1)
+clf = VotingClassifier(estimators=[('dt', clf1), ('sgd', clf3)], voting='soft', weights=[1,2.25]).fit(tf1, Y1)
 
 # Predict
 print "predict"
